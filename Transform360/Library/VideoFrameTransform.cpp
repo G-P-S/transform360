@@ -463,6 +463,7 @@ void VideoFrameTransform::calcualteFilteringConfig(
         break;
       }
     case LAYOUT_EAC_32:
+    case LAYOUT_EAC:
       {
         hFov = 270.0;
         vFov = 180.0;
@@ -1033,6 +1034,7 @@ bool VideoFrameTransform::transformPos(
           break;
         }
       case LAYOUT_EAC_32:
+      case LAYOUT_EAC:
         {
           vFace = (int) (y * 2);
           hFace = (int) (x * 3);
@@ -1041,6 +1043,28 @@ bool VideoFrameTransform::transformPos(
           x = tan((x - 0.5f) * M_PI * 0.5f) * 0.5f + 0.5f;
           y = tan((y - 0.5f) * M_PI * 0.5f) * 0.5f + 0.5f;
           face = hFace + (1 - vFace) * 3;
+          if (ctx_.output_layout == LAYOUT_EAC) {
+            // Remap faces
+            switch (face) {
+              case RIGHT: face = LEFT; break;
+              case LEFT: face = FRONT; break;
+              case TOP: face = RIGHT; break;
+              case BOTTOM: face = BOTTOM; break;
+              case FRONT: face = BACK; break;
+              case BACK: face = TOP; break;
+            }
+            // Change orientation of bottom half
+            if ((face == BOTTOM || face == BACK || face == TOP)) {
+              float new_x = y;
+              if (face == BACK) {
+                y = x;
+                x = 1.0f - new_x;
+              } else {
+                y = 1.0f - x;
+                x = new_x;
+              }
+            }
+          } // LAYOUT_EAC
           break;
         }
       case LAYOUT_N:
@@ -1057,6 +1081,7 @@ bool VideoFrameTransform::transformPos(
       case LAYOUT_EQUIRECT:
       case LAYOUT_BARREL:
       case LAYOUT_EAC_32:
+      case LAYOUT_EAC:
       case LAYOUT_TB_ONLY:
       case LAYOUT_TB_BARREL_ONLY:
       {
