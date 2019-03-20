@@ -830,6 +830,11 @@ bool VideoFrameTransform::transformPlane(
   return true;
 }
 
+static void fromEquiAngular(float& x)
+{
+  x = 2.0f / M_PI * atanf(x) * 2.0f;
+}
+
 void VideoFrameTransform::transformCubeFacePos(
   float tx,
   float ty,
@@ -842,6 +847,10 @@ void VideoFrameTransform::transformCubeFacePos(
   if (tz <= -kCubemapSideDistance) {
     x = tx / tz;
     y = ty / tz;
+    if (ctx_.input_layout == LAYOUT_EAC_32) {
+      fromEquiAngular(x);
+      fromEquiAngular(y);
+    }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
       *outX = (5.0f + x / ctx_.input_expand_coef) / 6.0f;
       *outY = (3.0f + y / ctx_.input_expand_coef) / 4.0f;
@@ -851,6 +860,10 @@ void VideoFrameTransform::transformCubeFacePos(
   if (tz >= kCubemapSideDistance) {
     x = tx / tz;
     y = ty / tz;
+    if (ctx_.input_layout == LAYOUT_EAC_32) {
+      fromEquiAngular(x);
+      fromEquiAngular(y);
+    }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
       *outX = (3.0f + x / ctx_.input_expand_coef) / 6.0f;
       *outY = (3.0f - y / ctx_.input_expand_coef) / 4.0f;
@@ -860,6 +873,10 @@ void VideoFrameTransform::transformCubeFacePos(
   if (tx <= -kCubemapSideDistance) {
     x = tz / tx;
     y = ty / tx;
+    if (ctx_.input_layout == LAYOUT_EAC_32) {
+      fromEquiAngular(x);
+      fromEquiAngular(y);
+    }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
       *outX = (3.0f - x / ctx_.input_expand_coef) / 6.0f;
       *outY = (1.0f + y / ctx_.input_expand_coef) / 4.0f;
@@ -869,6 +886,10 @@ void VideoFrameTransform::transformCubeFacePos(
   if (tx >= kCubemapSideDistance) {
     x = tz / tx;
     y = ty / tx;
+    if (ctx_.input_layout == LAYOUT_EAC_32) {
+      fromEquiAngular(x);
+      fromEquiAngular(y);
+    }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
       *outX = (1.0f - x / ctx_.input_expand_coef) / 6.0f;
       *outY = (1.0f - y / ctx_.input_expand_coef) / 4.0f;
@@ -878,6 +899,10 @@ void VideoFrameTransform::transformCubeFacePos(
   if (ty <= -kCubemapSideDistance) {
     x = tx / ty;
     y = tz / ty;
+    if (ctx_.input_layout == LAYOUT_EAC_32) {
+      fromEquiAngular(x);
+      fromEquiAngular(y);
+    }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
       *outX = (1.0f - x / ctx_.input_expand_coef) / 6.0f;
       *outY = (3.0f + y / ctx_.input_expand_coef) / 4.0f;
@@ -887,6 +912,10 @@ void VideoFrameTransform::transformCubeFacePos(
   if (ty >= kCubemapSideDistance) {
     x = tx / ty;
     y = tz / ty;
+    if (ctx_.input_layout == LAYOUT_EAC_32) {
+      fromEquiAngular(x);
+      fromEquiAngular(y);
+    }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
       *outX = (5.0f + x / ctx_.input_expand_coef) / 6.0f;
       *outY = (1.0f + y / ctx_.input_expand_coef) / 4.0f;
@@ -907,6 +936,7 @@ void VideoFrameTransform::transformInputPos(
     float* outY) {
   switch (ctx_.input_layout) {
     case LAYOUT_CUBEMAP_32:
+    case LAYOUT_EAC_32:
     {
       float d = sqrtf(tx * tx + ty * ty + tz * tz);
       transformCubeFacePos(tx / d, ty / d, tz / d, outX, outY);
