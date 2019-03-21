@@ -81,7 +81,7 @@ class VideoFrameTransform
       float *outY);
 
     // Transforms 3D vector to the input 2d coordinates
-    // Only supports CUBEMAP_32 and EQUIRECT formats
+    // Only supports CUBEMAP_32, EQUIRECT, EAC_32, and EAC formats
     void transformInputPos(
       float tx,
       float ty,

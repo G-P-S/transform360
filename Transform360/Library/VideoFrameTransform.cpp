@@ -844,81 +844,111 @@ void VideoFrameTransform::transformCubeFacePos(
 ) {
   float x, y;
 
-  if (tz <= -kCubemapSideDistance) {
+  if (tz <= -kCubemapSideDistance) { // BACK
     x = tx / tz;
     y = ty / tz;
-    if (ctx_.input_layout == LAYOUT_EAC_32) {
+    if (ctx_.input_layout == LAYOUT_EAC_32 || ctx_.input_layout == LAYOUT_EAC) {
       fromEquiAngular(x);
       fromEquiAngular(y);
     }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
-      *outX = (5.0f + x / ctx_.input_expand_coef) / 6.0f;
-      *outY = (3.0f + y / ctx_.input_expand_coef) / 4.0f;
+      if (ctx_.input_layout == LAYOUT_EAC) {
+        *outX = (3.0f - y / ctx_.input_expand_coef) / 6.0f;
+        *outY = (3.0f + x / ctx_.input_expand_coef) / 4.0f;
+      } else {
+        *outX = (5.0f + x / ctx_.input_expand_coef) / 6.0f;
+        *outY = (3.0f + y / ctx_.input_expand_coef) / 4.0f;
+      }
       return;
     }
   }
-  if (tz >= kCubemapSideDistance) {
+  if (tz >= kCubemapSideDistance) { // FRONT
     x = tx / tz;
     y = ty / tz;
-    if (ctx_.input_layout == LAYOUT_EAC_32) {
+    if (ctx_.input_layout == LAYOUT_EAC_32 || ctx_.input_layout == LAYOUT_EAC) {
       fromEquiAngular(x);
       fromEquiAngular(y);
     }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
-      *outX = (3.0f + x / ctx_.input_expand_coef) / 6.0f;
-      *outY = (3.0f - y / ctx_.input_expand_coef) / 4.0f;
+      if (ctx_.input_layout == LAYOUT_EAC) {
+        *outX = (3.0f + x / ctx_.input_expand_coef) / 6.0f;
+        *outY = (1.0f - y / ctx_.input_expand_coef) / 4.0f;
+      } else {
+        *outX = (3.0f + x / ctx_.input_expand_coef) / 6.0f;
+        *outY = (3.0f - y / ctx_.input_expand_coef) / 4.0f;
+      }
       return;
     }
   }
-  if (tx <= -kCubemapSideDistance) {
+  if (tx <= -kCubemapSideDistance) { // LEFT
     x = tz / tx;
     y = ty / tx;
-    if (ctx_.input_layout == LAYOUT_EAC_32) {
+    if (ctx_.input_layout == LAYOUT_EAC_32 || ctx_.input_layout == LAYOUT_EAC) {
       fromEquiAngular(x);
       fromEquiAngular(y);
     }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
-      *outX = (3.0f - x / ctx_.input_expand_coef) / 6.0f;
-      *outY = (1.0f + y / ctx_.input_expand_coef) / 4.0f;
+      if (ctx_.input_layout == LAYOUT_EAC) {
+        *outX = (1.0f - x / ctx_.input_expand_coef) / 6.0f;
+        *outY = (1.0f + y / ctx_.input_expand_coef) / 4.0f;
+      } else {
+        *outX = (3.0f - x / ctx_.input_expand_coef) / 6.0f;
+        *outY = (1.0f + y / ctx_.input_expand_coef) / 4.0f;
+      }
       return;
     }
   }
-  if (tx >= kCubemapSideDistance) {
+  if (tx >= kCubemapSideDistance) { // RIGHT
     x = tz / tx;
     y = ty / tx;
-    if (ctx_.input_layout == LAYOUT_EAC_32) {
+    if (ctx_.input_layout == LAYOUT_EAC_32 || ctx_.input_layout == LAYOUT_EAC) {
       fromEquiAngular(x);
       fromEquiAngular(y);
     }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
-      *outX = (1.0f - x / ctx_.input_expand_coef) / 6.0f;
-      *outY = (1.0f - y / ctx_.input_expand_coef) / 4.0f;
+      if (ctx_.input_layout == LAYOUT_EAC) {
+        *outX = (5.0f - x / ctx_.input_expand_coef) / 6.0f;
+        *outY = (1.0f - y / ctx_.input_expand_coef) / 4.0f;
+      } else {
+        *outX = (1.0f - x / ctx_.input_expand_coef) / 6.0f;
+        *outY = (1.0f - y / ctx_.input_expand_coef) / 4.0f;
+      }
       return;
     }
   }
-  if (ty <= -kCubemapSideDistance) {
+  if (ty <= -kCubemapSideDistance) { // BOTTOM
     x = tx / ty;
     y = tz / ty;
-    if (ctx_.input_layout == LAYOUT_EAC_32) {
+    if (ctx_.input_layout == LAYOUT_EAC_32 || ctx_.input_layout == LAYOUT_EAC) {
       fromEquiAngular(x);
       fromEquiAngular(y);
     }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
-      *outX = (1.0f - x / ctx_.input_expand_coef) / 6.0f;
-      *outY = (3.0f + y / ctx_.input_expand_coef) / 4.0f;
+      if (ctx_.input_layout == LAYOUT_EAC) {
+        *outX = (1.0f + y / ctx_.input_expand_coef) / 6.0f;
+        *outY = (3.0f + x / ctx_.input_expand_coef) / 4.0f;
+      } else {
+        *outX = (1.0f - x / ctx_.input_expand_coef) / 6.0f;
+        *outY = (3.0f + y / ctx_.input_expand_coef) / 4.0f;
+      }
       return;
     }
   }
-  if (ty >= kCubemapSideDistance) {
+  if (ty >= kCubemapSideDistance) { // TOP
     x = tx / ty;
     y = tz / ty;
-    if (ctx_.input_layout == LAYOUT_EAC_32) {
+    if (ctx_.input_layout == LAYOUT_EAC_32 || ctx_.input_layout == LAYOUT_EAC) {
       fromEquiAngular(x);
       fromEquiAngular(y);
     }
     if (x >= -1.0 && x <= 1.0 && y >= -1.0 && y <= 1.0) {
-      *outX = (5.0f + x / ctx_.input_expand_coef) / 6.0f;
-      *outY = (1.0f + y / ctx_.input_expand_coef) / 4.0f;
+      if (ctx_.input_layout == LAYOUT_EAC) {
+        *outX = (5.0f + y / ctx_.input_expand_coef) / 6.0f;
+        *outY = (3.0f - x / ctx_.input_expand_coef) / 4.0f;
+      } else {
+        *outX = (5.0f + x / ctx_.input_expand_coef) / 6.0f;
+        *outY = (1.0f + y / ctx_.input_expand_coef) / 4.0f;
+      }
       return;
     }
   }
@@ -937,6 +967,7 @@ void VideoFrameTransform::transformInputPos(
   switch (ctx_.input_layout) {
     case LAYOUT_CUBEMAP_32:
     case LAYOUT_EAC_32:
+    case LAYOUT_EAC:
     {
       float d = sqrtf(tx * tx + ty * ty + tz * tz);
       transformCubeFacePos(tx / d, ty / d, tz / d, outX, outY);
