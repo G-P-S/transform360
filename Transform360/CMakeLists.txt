@@ -13,4 +13,4 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 target_link_libraries(Transform360 ${OpenCV_LIBS})
 
 install(TARGETS Transform360 ARCHIVE DESTINATION lib LIBRARY DESTINATION lib COMPONENT library )
-install(DIRECTORY . DESTINATION include/Transform360 FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY Library/ DESTINATION include/transform360 FILES_MATCHING PATTERN "*.h")

@@ -47,33 +47,19 @@ REGISTER_FILTER(TRANSFORM360, transform360, vf);
 OBJS-$(CONFIG_TRANSFORM360_FILTER) += vf_transform360.o
 ```
 
-8. Edit `vf_transform360.c` in `libavfilter` folder
-
-Change the include path from
-```
-#include "transform360/VideoFrameTransformHandler.h"
-#include "transform360/VideoFrameTransformHelper.h"
-```
-
-to
-```
-#include "Transform360/Library/VideoFrameTransformHandler.h"
-#include "Transform360/Library/VideoFrameTransformHelper.h"
-```
-
-9. Configure ffmpeg in the source folder:
+8. Configure ffmpeg in the source folder:
 
 ```
 ./configure --prefix=/usr/local/transform/ffmpeg --enable-gpl --enable-nonfree --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libvpx --enable-libx264 --enable-libxvid --enable-libopencv --extra-libs='-lTransform360 -lstdc++'
 ```
 
-10. make ffmpeg
+9. make ffmpeg
 
 ```
 make
 ```
 
-11. use local binary with `./ffmpeg` or by installing it with `make install`
+10. use local binary with `./ffmpeg` or by installing it with `make install`
 
 ### Running
 
