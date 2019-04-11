@@ -37,6 +37,7 @@ typedef enum Layout {
   LAYOUT_BARREL,
   LAYOUT_EAC_32,
   LAYOUT_EAC,
+  LAYOUT_STEREOGRAPHIC,
   LAYOUT_N
 } Layout;
 

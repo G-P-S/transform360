@@ -35,6 +35,7 @@ static const float kYHalf = 0.5;
 static double kEpsilon = 1e-9;
 static double kSphereArea = 4 * M_PI;
 static double kFov = 0.5333 * M_PI;
+static const float kStereographicRadius = 10.0f;
 
 // cube transform parameters
 static const array<float, 3> P0 = {-0.5f,-0.5f,-0.5f };
@@ -450,6 +451,7 @@ void VideoFrameTransform::calcualteFilteringConfig(
         break;
       }
     case LAYOUT_EQUIRECT:
+    case LAYOUT_STEREOGRAPHIC:
       {
         hFov = 360.0;
         vFov = 180.0;
@@ -990,6 +992,36 @@ void VideoFrameTransform::transformInputPos(
   }
 }
 
+static bool intersectStereographic(
+// From http://codeofthedamned.com/index.php/the-little-planet-effect
+    float u,
+    float v,
+    float &x,
+    float &y,
+    float &z) {
+  float Nx    = 0.0f;
+  float Ny    = 0.0f;
+  float Nz    = 1.0f;
+  float dir_x = u - Nx;
+  float dir_y = v - Ny;
+  float dir_z = -1.0f - Nz;
+
+  float a = (dir_x * dir_x) + (dir_y * dir_y) + (dir_z * dir_z);
+  float b = (dir_x * Nx) + (dir_y * Ny) + (dir_z * Nz);
+
+  b *= 2.0f;
+  float d = b*b;
+  float q = -0.5f * (b - std::sqrt(d));
+
+  float t = q / a;
+
+  x = (dir_x * t) + Nx;
+  y = (dir_y * t) + Ny;
+  z = (dir_z * t) + Nz;
+
+  return true;
+}
+
 bool VideoFrameTransform::transformPos(
     float x,
     float y,
@@ -1128,6 +1160,12 @@ bool VideoFrameTransform::transformPos(
           } // LAYOUT_EAC
           break;
         }
+      case LAYOUT_STEREOGRAPHIC:
+        {
+          x = kStereographicRadius * (x - 0.5f);
+          y = kStereographicRadius * (y - 0.5f);
+          break;
+        }
       case LAYOUT_N:
         {
           printf(
@@ -1145,6 +1183,7 @@ bool VideoFrameTransform::transformPos(
       case LAYOUT_EAC:
       case LAYOUT_TB_ONLY:
       case LAYOUT_TB_BARREL_ONLY:
+      case LAYOUT_STEREOGRAPHIC:
       {
         if (ctx_.output_layout == LAYOUT_EQUIRECT ||
             (ctx_.output_layout == LAYOUT_BARREL && face < 0)) {
@@ -1155,6 +1194,11 @@ bool VideoFrameTransform::transformPos(
           qx = sin_yaw * cos_pitch;
           qy = sin_pitch;
           qz = cos_yaw * cos_pitch;
+        } else if (ctx_.output_layout == LAYOUT_STEREOGRAPHIC) {
+          if (!intersectStereographic(x, y, qx, qz, qy)) {
+            hasMapping = false;
+            break;
+          }
         } else {
           assert(x >= 0 && x <= 1);
           assert(y >= 0 && y <= 1);
