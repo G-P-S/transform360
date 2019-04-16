@@ -1162,8 +1162,8 @@ bool VideoFrameTransform::transformPos(
         }
       case LAYOUT_STEREOGRAPHIC:
         {
-          x = kStereographicRadius * (x - 0.5f);
-          y = kStereographicRadius * (y - 0.5f);
+          x = kStereographicRadius * ((1.0f - x) - 0.5f);
+          y = kStereographicRadius * ((1.0f - y) - 0.5f);
           break;
         }
       case LAYOUT_N:
