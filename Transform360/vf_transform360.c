@@ -217,7 +217,7 @@ static int config_output(AVFilterLink *outlink) {
     s->cube_edge_length = s->cube_edge_length - (s->cube_edge_length % 16);
 
     if (s->cube_edge_length > 0) {
-         if (s->output_layout == LAYOUT_CUBEMAP_32) {
+         if (s->output_layout == LAYOUT_CUBEMAP_32 || s->output_layout == LAYOUT_EAC_32 || s->output_layout == LAYOUT_EAC) {
             outlink->w = s->cube_edge_length * 3;
             outlink->h = s->cube_edge_length * 2;
 
