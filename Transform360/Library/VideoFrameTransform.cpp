@@ -1403,17 +1403,20 @@ bool VideoFrameTransform::transformFramePlane(
   int transformMatPlaneIndex,
   int imagePlaneIndex) {
   try {
+    int dataType = (inputWidthWithPadding >= 4 * inputWidth)? CV_8UC4 :
+                   (inputWidthWithPadding >= 3 * inputWidth)? CV_8UC3 :
+                   (inputWidthWithPadding >= 2 * inputWidth)? CV_8UC2 : CV_8U;
     Mat inputMat(
       inputHeight,
       inputWidth,
-      CV_8U,
+      dataType,
       inputArray,
       inputWidthWithPadding);
 
     Mat outputMat(
       outputHeight,
       outputWidth,
-      CV_8U,
+      dataType,
       outputArray,
       outputWidthWithPadding);
 
