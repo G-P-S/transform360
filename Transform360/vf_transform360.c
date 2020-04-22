@@ -74,6 +74,7 @@ typedef struct TransformContext {
     float fixed_cube_offcenter_x; // offcenter projection x
     float fixed_cube_offcenter_y; // offcenter projection y
     float fixed_cube_offcenter_z; // offcenter projection z
+    char *rotations_json;
 
     // openCV-based transform parameters
     VideoFrameTransform* transform;
@@ -139,11 +140,14 @@ static inline int generate_map(
       .num_vertical_segments = s->num_vertical_segments,
       .num_horizontal_segments = s->num_horizontal_segments,
       .adjust_kernel = s->adjust_kernel,
-      .kernel_adjust_factor = s->kernel_adjust_factor};
+      .kernel_adjust_factor = s->kernel_adjust_factor,
+      .rotations_json = s->rotations_json};
 
-    s->transform = VideoFrameTransform_new(&frame_transform_ctx);
     if (!s->transform) {
-      return AVERROR(ENOMEM);
+      s->transform = VideoFrameTransform_new(&frame_transform_ctx);
+      if (!s->transform) {
+        return AVERROR(ENOMEM);
+      }
     }
 
     int in_w, in_h, out_w, out_h;
@@ -312,7 +316,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *in) {
     av_log(ctx, AV_LOG_VERBOSE, "Frame\n");
 
     // map not yet set
-    if (s->out_map_planes != 2) {
+    if (s->out_map_planes != 2 || s->rotations_json) {
       int result = generate_map(s, inlink, outlink, in);
       if (result != 0) {
           av_frame_free(&in);
@@ -427,6 +431,7 @@ static const AVOption transform360_options[] = {
     { "yaw", "View orientation for flat_fixed projection, degrees",   OFFSET(fixed_yaw),          AV_OPT_TYPE_FLOAT,   {.dbl =   0.0}, -360, 360,  .flags = FLAGS },
     { "pitch", "View orientation for flat_fixed projection, degrees", OFFSET(fixed_pitch),        AV_OPT_TYPE_FLOAT,   {.dbl =   0.0}, -180, 180,  .flags = FLAGS },
     { "roll", "View orientation for flat_fixed projection, degrees",  OFFSET(fixed_roll),         AV_OPT_TYPE_FLOAT,   {.dbl =   0.0}, -180, 180,  .flags = FLAGS },
+    { "rotations", "File name of quaternion rotations in JSON format",OFFSET(rotations_json),     AV_OPT_TYPE_STRING,  {.str = NULL}, 0,           .flags = FLAGS },
     { "hfov", "Horizontal field of view for flat_fixed projection, degrees (default 120)",  OFFSET(fixed_hfov), AV_OPT_TYPE_FLOAT,   {.dbl = 120.0}, -360, 360,  .flags = FLAGS },
     { "vfov", "Vertical field of view for flat_fixed projection, degrees (default 110)",     OFFSET(fixed_vfov), AV_OPT_TYPE_FLOAT,   {.dbl = 110.0}, -180, 180,  .flags = FLAGS },
     { "cube_offcenter_x", "Offcenter cube displacement x",   OFFSET(fixed_cube_offcenter_x),          AV_OPT_TYPE_FLOAT,   {.dbl =   0.0}, -1, 1,  .flags = FLAGS },

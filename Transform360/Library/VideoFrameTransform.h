@@ -22,6 +22,9 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "json.hpp"
+using json = nlohmann::json;
+
 struct SegmentFilteringConfig
 {
   SegmentFilteringConfig(
@@ -38,6 +41,28 @@ struct SegmentFilteringConfig
   int left, top, width, height;
 };
 
+struct Quaternion
+{
+  float x, y, z, w;
+  Quaternion() : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
+  Quaternion(float inputX, float inputY, float inputZ, float inputW = 0.0f)
+    : x(inputX), y(inputY), z(inputZ), w(inputW) {}
+  Quaternion operator*(const Quaternion& rotation) const {
+    Quaternion result;
+    result.x =  x * rotation.w + y * rotation.z - z * rotation.y + w * rotation.x;
+    result.y = -x * rotation.z + y * rotation.w + z * rotation.x + w * rotation.y;
+    result.z =  x * rotation.y - y * rotation.x + z * rotation.w + w * rotation.z;
+    result.w = -x * rotation.x - y * rotation.y - z * rotation.z + w * rotation.w;
+    return result;
+  }
+  Quaternion conjugate() const {
+    return Quaternion(-x, -y, -z, w);
+  }
+  void rotate(const Quaternion& rotation) {
+    *this = rotation * (*this) * rotation.conjugate();
+  }
+};
+
 class VideoFrameTransform
 {
   public:
@@ -49,6 +74,25 @@ class VideoFrameTransform
       int outputWidth,
       int outputHeight,
       int transformMatPlaneIndex);
+
+    bool updateMapForPlane(
+      int inputWidth,
+      int inputHeight,
+      int scaledOutputWidth,
+      int scaledOutputHeight,
+      int transformPlaneIndex,
+      float inputPixelWidth);
+
+    void updateMapSegment(
+      cv::Mat warpMat,
+      int segmentIdx,
+      int planeIdx,
+      int inputWidth,
+      int inputHeight,
+      int scaledOutputWidth,
+      int scaledOutputHeight,
+      float inputPixelWidth,
+      int segmentHeight);
 
     bool transformPlane(
       const cv::Mat& inputMat,
@@ -165,4 +209,9 @@ class VideoFrameTransform
     /// Map of <transformMatPlaneIndex, vector of config parameters>
     /// for filtering frame plane
     std::map<int, std::vector<SegmentFilteringConfig>> segmentFilteringConfigs_;
+
+    /// File name of quaternion rotations in JSON format (cannot be used with adjust_kernel)
+    json rotationsJson_;
+    json::iterator rotationsIter_;
+    Quaternion quaternion_ {0.0f, 0.0f, 0.0f, 0.0f};
 };

@@ -21,6 +21,7 @@
 #include <memory>
 #include <set>
 #include <stdio.h>
+#include <fstream>
 
 #ifdef FACEBOOK_LAYOUT
 #include "FBVideoFrameTransformUtilities.h"
@@ -223,6 +224,19 @@ void VideoFrameTransform::filterSegment(
 VideoFrameTransform::VideoFrameTransform(
   FrameTransformContext* ctx) {
   memcpy(&ctx_, ctx,  sizeof(*ctx));
+  if (ctx_.rotations_json && ::strcmp(ctx_.rotations_json, "")) {
+    std::ifstream file(ctx_.rotations_json);
+    if (file.is_open()) {
+      file >> rotationsJson_;
+      if (!rotationsJson_.is_array()) {
+        printf("JSON root is not an array\n");
+        rotationsJson_.clear();
+      }
+      rotationsIter_ = rotationsJson_.begin();
+    } else {
+      printf("Failed to open rotations JSON file \"%s\"\n", ctx_.rotations_json);
+    }
+  } 
 }
 
 void VideoFrameTransform::generateKernelAndFilteringConfig(
@@ -568,6 +582,12 @@ bool VideoFrameTransform::generateMapForPlane(
       inputPixelWidth *= 2;
     }
 
+    // If map already exists, update it
+    if (updateMapForPlane(inputWidth, inputHeight, scaledOutputWidth, scaledOutputHeight,
+                          transformMatPlaneIndex, inputPixelWidth)) {
+      return true;
+    }
+
     Mat warpMat = Mat(scaledOutputHeight, scaledOutputWidth, CV_32FC2);
     for (int i = 0; i < scaledOutputHeight; ++i) {
       for (int j = 0; j < scaledOutputWidth; ++j) {
@@ -608,6 +628,82 @@ bool VideoFrameTransform::generateMapForPlane(
       transformMatPlaneIndex,
       ex.what());
     return false;
+  }
+}
+
+// Update maps from rotation data
+bool VideoFrameTransform::updateMapForPlane(
+    int inputWidth,
+    int inputHeight,
+    int scaledOutputWidth,
+    int scaledOutputHeight,
+    int transformMatPlaneIndex,
+    float inputPixelWidth) {
+  bool mapExists = warpMats_.find(transformMatPlaneIndex) != warpMats_.end();
+
+  // Read rotations from JSON file - only on first plane
+  if (transformMatPlaneIndex == 0 && rotationsIter_ != rotationsJson_.end()) {
+    std::vector<float> items = *rotationsIter_++;
+    if (items.size() > 3) {
+      quaternion_.x = items[0];
+      quaternion_.y = items[1];
+      quaternion_.z = items[2];
+      quaternion_.w = items[3];
+    } else {
+      printf("Incorrect number of elements in JSON file: %lu\n", items.size());
+    }
+  }
+
+  if (mapExists && !ctx_.enable_low_pass_filter) {
+    // Update map using horizontal segments
+    auto segmentHeight = scaledOutputHeight / ctx_.num_vertical_segments;
+    vector<thread> threads;
+    for (auto i = 0; i < ctx_.num_vertical_segments; i++) {
+      if ((i == ctx_.num_vertical_segments - 1) && (scaledOutputHeight % ctx_.num_vertical_segments)) {
+        segmentHeight += scaledOutputHeight % ctx_.num_vertical_segments;
+      }
+      Mat m = Mat(warpMats_[transformMatPlaneIndex], Range(i * segmentHeight, (i + 1) * segmentHeight));
+      threads.emplace_back(&VideoFrameTransform::updateMapSegment, this, m, i, transformMatPlaneIndex,
+        inputWidth, inputHeight, scaledOutputWidth, scaledOutputHeight, inputPixelWidth, segmentHeight);
+    }
+    for (auto& t : threads) {
+      t.join();
+    }
+    return true;
+  }
+
+  // Map not yet created or must be recreated
+  return false;
+}
+
+void VideoFrameTransform::updateMapSegment(
+    Mat warpMat,
+    int segmentIdx,
+    int planeIdx,
+    int inputWidth,
+    int inputHeight,
+    int scaledOutputWidth,
+    int scaledOutputHeight,
+    float inputPixelWidth,
+    int segmentHeight) {
+  auto segmentStartRow = segmentIdx * (scaledOutputHeight / ctx_.num_vertical_segments);
+  float outX, outY;
+
+  for (auto i = 0; i < segmentHeight; ++i) {
+    for (auto j = 0; j < scaledOutputWidth; ++j) {
+      auto  k = segmentStartRow + i;
+      float y = (k + 0.5f) / scaledOutputHeight;
+      float x = (j + 0.5f) / scaledOutputWidth;
+      if (transformPos(x, y, &outX, &outY, planeIdx, inputPixelWidth)) {
+        warpMat.at<Point2f>(i, j) =
+          Point2f(outX * inputWidth - 0.5f, outY * inputHeight - 0.5f);
+      } else {
+        printf(
+          "Failed to find the mapping coordinate for point (%d, %d)\n",
+          k, j);
+        return;
+      }
+    }
   }
 }
 
@@ -1297,22 +1393,29 @@ bool VideoFrameTransform::transformPos(
         }
 
         // rotation
-        float s1 = sin(ctx_.fixed_yaw * M_PI / 180.0f);
-        float s2 = sin(ctx_.fixed_pitch * M_PI / 180.0f);
-        float s3 = sin(ctx_.fixed_roll * M_PI / 180.0f);
-        float c1 = cos(ctx_.fixed_yaw * M_PI / 180.0f);
-        float c2 = cos(ctx_.fixed_pitch * M_PI / 180.0f);
-        float c3 = cos(ctx_.fixed_roll * M_PI / 180.0f);
+        if (!rotationsJson_.empty()) {
+          Quaternion vector(qx, -qy, qz);
+          vector.rotate(quaternion_);
+          tx = vector.x;
+          ty = vector.y;
+          tz = vector.z;
+        } else {
+          float s1 = sin(ctx_.fixed_yaw * M_PI / 180.0f);
+          float s2 = sin(ctx_.fixed_pitch * M_PI / 180.0f);
+          float s3 = sin(ctx_.fixed_roll * M_PI / 180.0f);
+          float c1 = cos(ctx_.fixed_yaw * M_PI / 180.0f);
+          float c2 = cos(ctx_.fixed_pitch * M_PI / 180.0f);
+          float c3 = cos(ctx_.fixed_roll * M_PI / 180.0f);
 
-        tx = qx * (c1 * c3 + s1 * s2 * s3)
-          - qy * (c3 * s1 * s2 - c1 * s3)
-          + qz * (c2 * s1);
-        ty = qx * (c2 * s3) - qy * (c2 * c3)
-          + qz * (-s2);
-        tz = qx * (c1 * s2 * s3 - c3 * s1)
-          - qy * (c1 * c3 * s2 + s1 * s3)
-          + qz * (c1 * c2);
-
+          tx = qx * (c1 * c3 + s1 * s2 * s3)
+            - qy * (c3 * s1 * s2 - c1 * s3)
+            + qz * (c2 * s1);
+          ty = qx * (c2 * s3) - qy * (c2 * c3)
+            + qz * (-s2);
+          tz = qx * (c1 * s2 * s3 - c3 * s1)
+            - qy * (c1 * c3 * s2 + s1 * s3)
+            + qz * (c1 * c2);
+        }
         ty = -ty;
 
         transformInputPos(tx, ty, tz, inputPixelWidth, outX, outY);

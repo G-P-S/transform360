@@ -91,4 +91,6 @@ typedef struct FrameTransformContext {
   int adjust_kernel; /// Adjust kernels bsed on the "distance" (in radians)
                      /// from the input point (yaw, pitch)
   float kernel_adjust_factor; /// Factor to further adjust the kernel size
+  const char* rotations_json; /// The name of a JSON file containing quaternions
+
 } FrameTransformContext;
