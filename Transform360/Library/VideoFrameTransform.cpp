@@ -642,7 +642,7 @@ bool VideoFrameTransform::updateMapForPlane(
   bool mapExists = warpMats_.find(transformMatPlaneIndex) != warpMats_.end();
 
   // Read rotations from JSON file - only on first plane
-  if (transformMatPlaneIndex == 0 && rotationsIter_ != rotationsJson_.end()) {
+  if (transformMatPlaneIndex == 0 && !rotationsJson_.empty() && rotationsIter_ != rotationsJson_.end()) {
     std::vector<float> items = *rotationsIter_++;
     if (items.size() > 3) {
       quaternion_.x = items[0];
