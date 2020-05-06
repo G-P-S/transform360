@@ -657,14 +657,18 @@ bool VideoFrameTransform::updateMapForPlane(
   if (mapExists && !ctx_.enable_low_pass_filter) {
     // Update map using horizontal segments
     auto segmentHeight = scaledOutputHeight / ctx_.num_vertical_segments;
+    auto lastSegmentHeight = segmentHeight + scaledOutputHeight % ctx_.num_vertical_segments;
     vector<thread> threads;
     for (auto i = 0; i < ctx_.num_vertical_segments; i++) {
-      if ((i == ctx_.num_vertical_segments - 1) && (scaledOutputHeight % ctx_.num_vertical_segments)) {
-        segmentHeight += scaledOutputHeight % ctx_.num_vertical_segments;
+      if (i == ctx_.num_vertical_segments - 1) {
+        Mat m = Mat(warpMats_[transformMatPlaneIndex], Range(i * segmentHeight, i * segmentHeight + lastSegmentHeight));
+        threads.emplace_back(&VideoFrameTransform::updateMapSegment, this, m, i, transformMatPlaneIndex,
+          inputWidth, inputHeight, scaledOutputWidth, scaledOutputHeight, inputPixelWidth, lastSegmentHeight);
+      } else {
+        Mat m = Mat(warpMats_[transformMatPlaneIndex], Range(i * segmentHeight, i * segmentHeight + segmentHeight));
+        threads.emplace_back(&VideoFrameTransform::updateMapSegment, this, m, i, transformMatPlaneIndex,
+          inputWidth, inputHeight, scaledOutputWidth, scaledOutputHeight, inputPixelWidth, segmentHeight);
       }
-      Mat m = Mat(warpMats_[transformMatPlaneIndex], Range(i * segmentHeight, (i + 1) * segmentHeight));
-      threads.emplace_back(&VideoFrameTransform::updateMapSegment, this, m, i, transformMatPlaneIndex,
-        inputWidth, inputHeight, scaledOutputWidth, scaledOutputHeight, inputPixelWidth, segmentHeight);
     }
     for (auto& t : threads) {
       t.join();
